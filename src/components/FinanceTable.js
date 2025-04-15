@@ -35,7 +35,7 @@ const FinanceTable = ({ onDataLoad }) => {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
@@ -165,7 +165,7 @@ const FinanceTable = ({ onDataLoad }) => {
           onChange={handleDateChange}
           placeholder="Chọn tháng"
           allowClear
-          defaultValue={dayjs()}
+          defaultValue={selectedDate}
           format="MM/YYYY"
         />
         <Select
