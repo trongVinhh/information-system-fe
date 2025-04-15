@@ -1,0 +1,43 @@
+/* Căn giữa nội dung dashboard */
+.container-fluid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.text-center {
+    margin-bottom: 20px;
+}
+
+/* Responsive Table */
+.table-responsive {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .table-responsive {
+        width: 95%;
+    }
+}
+
+@media (max-width: 768px) {
+    .container-fluid {
+        padding: 15px;
+    }
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .table-responsive {
+        width: 100%;
+    }
+}

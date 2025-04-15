@@ -1,0 +1,29 @@
+.logout-container {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+  }
+
+  .nav-custom {
+    position: absolute;
+    right: 100px;
+    top: 10px;
+  }
+  
+  
+  @media (max-width: 768px) {
+    .logout-container {
+      position: static;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .nav-custom {
+      position: static;
+      text-align: center;
+      margin-top: 10px;
+      margin-left: -68px;
+    }
+    
+  }
+  
