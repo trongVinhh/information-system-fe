@@ -165,6 +165,8 @@ const FinanceTable = ({ onDataLoad }) => {
           onChange={handleDateChange}
           placeholder="Chọn tháng"
           allowClear
+          defaultValue={dayjs()}
+          format="MM/YYYY"
         />
         <Select
           placeholder="Chọn danh mục"
