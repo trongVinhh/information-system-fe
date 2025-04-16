@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Table, Tag, Select, DatePicker, Button } from "antd";
+import { Table, Tag, Select, DatePicker } from "antd";
 import {
   PieChart,
   Pie,
@@ -11,7 +11,7 @@ import {
   BarChart,
   CartesianGrid,
   Bar,
-  YAxis
+  YAxis,
 } from "recharts";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -40,9 +40,17 @@ const FinanceTable = ({ onDataLoad }) => {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [balance, setBalance] = useState(0);
-  const [userSheetInfo, setUserSheetInfo] = useState({});
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
   useEffect(() => {
     fetchData();
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   const formatCurrencyToNumber = (value) => {
@@ -51,7 +59,6 @@ const FinanceTable = ({ onDataLoad }) => {
   };
 
   const fetchData = async () => {
-    // const response = await UserSheetInfoApi();
     const response = await fetch("https://backend.genbook.site/user/my-sheet", {
       method: "POST",
       headers: {
@@ -65,6 +72,7 @@ const FinanceTable = ({ onDataLoad }) => {
     const responseData = await response.json();
 
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${responseData.sheetId}/values/${responseData.range}?key=${responseData.apiKey}`;
+
     try {
       const response = await fetch(url);
       const result = await response.json();
@@ -78,8 +86,8 @@ const FinanceTable = ({ onDataLoad }) => {
           category: row[4] || "OTHER",
           date: row[5]
             ? dayjs(row[5], ["DD/MM/YYYY HH:mm:ss", "YYYY-MM-DD"]).format(
-              "YYYY-MM-DD"
-            )
+                "YYYY-MM-DD"
+              )
             : "",
         }));
         setData(formattedData);
@@ -147,20 +155,73 @@ const FinanceTable = ({ onDataLoad }) => {
         .reduce((sum, item) => sum + item.amount, 0),
     }))
     .filter((item) => item.value > 0);
-  const currentYear = selectedDate ? dayjs(selectedDate).year() : dayjs().year();
+
+  const currentYear = selectedDate
+    ? dayjs(selectedDate).year()
+    : dayjs().year();
   const yearlyData = Array.from({ length: 12 }, (_, i) => {
     const month = (i + 1).toString().padStart(2, "0");
     return {
       month: `${month}`,
-      income: data.filter(item => item.date.startsWith(`${currentYear}-${month}`) && item.type === "INCOME").reduce((sum, item) => sum + item.amount, 0),
-      expense: data.filter(item => item.date.startsWith(`${currentYear}-${month}`) && item.type === "EXPENSE").reduce((sum, item) => sum + item.amount, 0),
+      income: data
+        .filter(
+          (item) =>
+            item.date.startsWith(`${currentYear}-${month}`) &&
+            item.type === "INCOME"
+        )
+        .reduce((sum, item) => sum + item.amount, 0),
+      expense: data
+        .filter(
+          (item) =>
+            item.date.startsWith(`${currentYear}-${month}`) &&
+            item.type === "EXPENSE"
+        )
+        .reduce((sum, item) => sum + item.amount, 0),
     };
   });
 
+  const columns = isMobile
+    ? [
+        { title: "Ngày", dataIndex: "date", key: "date" },
+        {
+          title: "Số tiền",
+          dataIndex: "amount",
+          key: "amount",
+          render: (text) => text.toLocaleString() + " VND",
+        },
+        { title: "Ghi chú", dataIndex: "note", key: "note" },
+      ]
+    : [
+        { title: "STT", dataIndex: "key", key: "key" },
+        { title: "Ngày", dataIndex: "date", key: "date" },
+        {
+          title: "Loại",
+          dataIndex: "type",
+          key: "type",
+          render: (type) => (
+            <Tag color={type === "EXPENSE" ? "red" : "green"}>{type}</Tag>
+          ),
+        },
+        { title: "Danh mục", dataIndex: "category", key: "category" },
+        {
+          title: "Số tiền",
+          dataIndex: "amount",
+          key: "amount",
+          render: (text) => text.toLocaleString() + " VND",
+        },
+        { title: "Ghi chú", dataIndex: "note", key: "note" },
+      ];
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ marginBottom: 16 }}>
+    <div style={{ padding: isMobile ? 0 : 20 }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
         <MonthPicker
           onChange={handleDateChange}
           placeholder="Chọn tháng"
@@ -170,7 +231,7 @@ const FinanceTable = ({ onDataLoad }) => {
         />
         <Select
           placeholder="Chọn danh mục"
-          style={{ width: 200, marginLeft: 10 }}
+          style={{ width: 200 }}
           onChange={handleCategoryChange}
           allowClear
         >
@@ -181,6 +242,7 @@ const FinanceTable = ({ onDataLoad }) => {
           ))}
         </Select>
       </div>
+
       <div style={{ marginBottom: 16, fontSize: "18px" }}>
         <p>
           <b>Tổng thu nhập:</b>{" "}
@@ -201,34 +263,31 @@ const FinanceTable = ({ onDataLoad }) => {
           </span>
         </p>
       </div>
-      <Table
-        columns={[
-          { title: "STT", dataIndex: "key", key: "key" },
-          { title: "Ngày", dataIndex: "date", key: "date" },
-          {
-            title: "Loại",
-            dataIndex: "type",
-            key: "type",
-            render: (type) => (
-              <Tag color={type === "EXPENSE" ? "red" : "green"}>{type}</Tag>
-            ),
-          },
-          { title: "Danh mục", dataIndex: "category", key: "category" },
-          {
-            title: "Số tiền",
-            dataIndex: "amount",
-            key: "amount",
-            render: (text) => text.toLocaleString() + " VND",
-          },
-          { title: "Ghi chú", dataIndex: "note", key: "note" },
-        ]}
-        dataSource={filteredData}
-        bordered
-      />
-      <div style={{ display: "flex", justifyContent: "space-around" }}>
-        <div style={{ display: "flex", flexDirection: "column" }}>
+
+      <div style={{ overflowX: "auto" }}>
+        <Table
+          columns={columns}
+          dataSource={filteredData}
+          bordered
+          pagination={{ pageSize: 5 }}
+        />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          justifyContent: isMobile ? "center" : "space-between",
+          alignItems: isMobile ? "center" : "",
+          gap: 20,
+          marginTop: 30,
+        }}
+      >
+        <div
+          style={{ flex: 1, width: isMobile ? "100%" : "50%"}}
+        >
           <h3>Biểu đồ thu nhập</h3>
-          <ResponsiveContainer width="110%" height={300}>
+          <ResponsiveContainer width="100%" height={380}>
             <PieChart>
               <Pie
                 data={incomeChartData}
@@ -249,9 +308,11 @@ const FinanceTable = ({ onDataLoad }) => {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div
+          style={{ flex: 1, width: isMobile ? "100%" : "50%"}}
+        >
           <h3>Biểu đồ chi tiêu</h3>
-          <ResponsiveContainer width="110%" height={300}>
+          <ResponsiveContainer width="100%" height={400}>
             <PieChart>
               <Pie
                 data={expenseChartData}
@@ -273,19 +334,20 @@ const FinanceTable = ({ onDataLoad }) => {
           </ResponsiveContainer>
         </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-around" }}>
-        <div style={{width: "100%", marginTop: "30px", marginBottom: "20px"}}><h3>Biểu đồ thu chi các tháng trong năm</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={yearlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="income" fill="#00C49F" name="Thu nhập" />
-              <Bar dataKey="expense" fill="#FF8042" name="Chi tiêu" />
-            </BarChart>
-          </ResponsiveContainer></div>
+
+      <div style={{ marginTop: 30 }}>
+        <h3>Biểu đồ thu chi các tháng trong năm</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={yearlyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="income" fill="#00C49F" name="Thu nhập" />
+            <Bar dataKey="expense" fill="#FF8042" name="Chi tiêu" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
