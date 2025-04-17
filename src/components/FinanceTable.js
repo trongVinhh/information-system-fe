@@ -116,7 +116,7 @@ const FinanceTable = ({ onDataLoad }) => {
   const handleTypeChange = (type) => {
     console.log("Selected type:", type);
     setSelectedType(type);
-    filterData(selectedDate, selectedCategory, selectedType);
+    filterData(selectedDate, selectedCategory, type);
   };
 
   const filterData = (date, category, type) => {
