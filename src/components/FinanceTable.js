@@ -33,10 +33,12 @@ const COLORS = [
 const FinanceTable = ({ onDataLoad }) => {
   const storedToken = localStorage.getItem("idToken");
   const [data, setData] = useState([]);
+  const [types, setTypes] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [balance, setBalance] = useState(0);
@@ -93,6 +95,7 @@ const FinanceTable = ({ onDataLoad }) => {
         setData(formattedData);
         setFilteredData(formattedData);
         setCategories([...new Set(formattedData.map((item) => item.category))]);
+        setTypes([...new Set(formattedData.map((item) => item.type))]);
         if (onDataLoad) onDataLoad(formattedData);
       }
     } catch (error) {
@@ -102,15 +105,21 @@ const FinanceTable = ({ onDataLoad }) => {
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
-    filterData(date, selectedCategory);
+    filterData(date, selectedCategory, selectedType);
   };
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
-    filterData(selectedDate, category);
+    filterData(selectedDate, category, selectedType);
   };
 
-  const filterData = (date, category) => {
+  const handleTypeChange = (type) => {
+    console.log("Selected type:", type);
+    setSelectedType(type);
+    filterData(selectedDate, selectedCategory, selectedType);
+  };
+
+  const filterData = (date, category, type) => {
     let filtered = data;
     if (date) {
       const selectedMonthStr = dayjs(date).format("YYYY-MM");
@@ -120,6 +129,9 @@ const FinanceTable = ({ onDataLoad }) => {
     }
     if (category) {
       filtered = filtered.filter((item) => item.category === category);
+    }
+    if (type) {
+      filtered = filtered.filter((item) => item.type === type);
     }
     setFilteredData(filtered);
 
@@ -135,7 +147,7 @@ const FinanceTable = ({ onDataLoad }) => {
   };
 
   useEffect(() => {
-    filterData(selectedDate, selectedCategory);
+    filterData(selectedDate, selectedCategory, selectedType);
   }, [data]);
 
   const expenseChartData = categories
@@ -229,6 +241,18 @@ const FinanceTable = ({ onDataLoad }) => {
           defaultValue={selectedDate}
           format="MM/YYYY"
         />
+        <Select
+          placeholder="Chọn loại"
+          style={{ width: 200 }}
+          onChange={handleTypeChange}
+          allowClear
+        >
+          {types.map((cat) => (
+            <Option key={cat} value={cat}>
+              {cat}
+            </Option>
+          ))}
+        </Select>
         <Select
           placeholder="Chọn danh mục"
           style={{ width: 200 }}
