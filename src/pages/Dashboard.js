@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
-import { UserDetailsApi } from "../services/Api";
 import { logout, isAuthenticated } from "../services/Auth";
 import { SmartTableColumnNamesExample } from "../components/SmartTable";
 
@@ -9,18 +8,6 @@ import { SmartTableColumnNamesExample } from "../components/SmartTable";
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState({ name: "", email: "", localId: "" });
-
-  useEffect(() => {
-    if (isAuthenticated()) {
-      UserDetailsApi().then((response) => {
-        console.log(response.data.email);
-        setUser({
-          name: response.data.name,
-          email: response.data.email,
-        });
-      });
-    }
-  }, []);
 
   const logoutUser = () => {
     logout();
@@ -40,8 +27,6 @@ export default function DashboardPage() {
           <h3>Quản lí tài khoản</h3>
         </div>
         
-    
-
         {/* Căn giữa bảng */}
         <div className="table-responsive mx-auto" style={{ maxWidth: "90%" }}>
           <SmartTableColumnNamesExample />

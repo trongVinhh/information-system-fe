@@ -2,38 +2,39 @@ import React, { useState } from "react";
 import { Form, Input, Select, Button, message, Card, Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import NavBar from "../components/NavBar";
+import { supabaseClient } from "../services/Supabase";
+import { getUserId } from "../services/Storage";
 
 const { Option } = Select;
 
 export default function CreateAccount() {
-  const storedToken = localStorage.getItem("idToken");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (values) => {
-    if (!storedToken) {
-      message.error("❌ Token không hợp lệ!");
+    const userId = getUserId();
+    if (!userId) {
+      message.error("❌ Không tìm thấy thông tin người dùng!");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch("https://backend.genbook.site/account", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${storedToken}`,
-        },
-        body: JSON.stringify(values),
-      });
+      const id = crypto.randomUUID();
+      const { data, error } = await supabaseClient
+        .from("users_accounts")
+        .insert([{id, ...values, userId }])
+        .select()
+        .single();
 
-      const result = await response.json();
-      if (response.ok) {
-        message.success("✅ Tạo tài khoản thành công!");
+      if (error) {
+        console.error("Create error:", error);
+        message.error(`❌ Lỗi: ${error.message}`);
       } else {
-        message.error(`❌ Lỗi: ${result.message || "Không thể tạo tài khoản"}`);
+        message.success("✅ Tạo tài khoản thành công!");
       }
     } catch (error) {
-      message.error("❌ Lỗi kết nối đến server!");
+      console.error("Unexpected error:", error);
+      message.error("❌ Có lỗi xảy ra, vui lòng thử lại!");
     } finally {
       setLoading(false);
     }

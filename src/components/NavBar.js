@@ -4,6 +4,8 @@ import { isAuthenticated } from "../services/Auth";
 import { Button } from "antd";
 import axios from "axios";
 import "./NavBar.css";
+import { supabaseClient } from "../services/Supabase";
+import { getUserId } from "../services/Storage";
 
 export default function NavBar(props) {
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -17,17 +19,9 @@ export default function NavBar(props) {
 
   const fetchUserDetails = async () => {
     try {
-      const response = await axios.post(
-        "/user/my-info",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("idToken")}`,
-            Accept: "application/json",
-          },
-        }
-      );
-      setUser(response.data); // Giả sử API trả về { name: "Tên User" }
+      const response = await supabaseClient.from("users").select("name", "email").eq("email", getUserId()).single();
+      console.log("User details:", response.data);
+      setUser(response.data);
     } catch (error) {
       console.error("Lỗi lấy thông tin user:", error);
     }

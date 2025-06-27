@@ -15,6 +15,8 @@ import {
 } from "recharts";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import { supabaseClient } from "../services/Supabase";
+import { getUserId } from "../services/Storage";
 
 dayjs.extend(customParseFormat);
 
@@ -61,18 +63,8 @@ const FinanceTable = ({ onDataLoad }) => {
   };
 
   const fetchData = async () => {
-    const response = await fetch("https://backend.genbook.site/user/my-sheet", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${storedToken}`,
-      },
-    });
-
-    if (!response.ok) throw new Error("Failed to fetch data");
-
-    const responseData = await response.json();
-
+    const response = await supabaseClient.from("users_settings").select("*").eq("userId", getUserId()).single();
+    const responseData = response.data.value;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${responseData.sheetId}/values/${responseData.range}?key=${responseData.apiKey}`;
 
     try {

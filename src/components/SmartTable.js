@@ -17,6 +17,8 @@ import {
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import { Link } from "react-router-dom";
+import { supabaseClient } from "../services/Supabase";
+import { getUserId } from "../services/Storage";
 
 export const SmartTableColumnNamesExample = () => {
   const storedToken = localStorage.getItem("idToken");
@@ -44,25 +46,17 @@ export const SmartTableColumnNamesExample = () => {
 
     const fetchData = async () => {
       try {
-        // const response = await fetch("https://backend.genbook.site/account", {
-          const response = await fetch("https://backend.genbook.site/account/my-account", {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${storedToken}`,
-          },
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch data");
-
-        const responseData = await response.json();
+        const responseData = await supabaseClient
+          .from("users_accounts")
+          .select()
+          .eq("userId", getUserId());
         if (!responseData.data || !Array.isArray(responseData.data)) {
           throw new Error("Invalid data format");
         }
 
         const formattedData = responseData.data.map((item) => ({
-          key: item._id,
-          id: item._id,
+          key: item.id,
+          id: item.id,
           type: item.type,
           name: item.name,
           username: item.username,
@@ -133,61 +127,116 @@ export const SmartTableColumnNamesExample = () => {
     }
   };
 
+  // const handleSaveUpdate = async () => {
+  //   if (!editingAccount) return;
+
+  //   if (editingAccount.password && !updatePassword) {
+  //     message.error("Please enter your current password to update!");
+  //     return;
+  //   }
+
+  //   try {
+  //     const updatedData = {
+  //       type: editingAccount.type,
+  //       name: editingAccount.name,
+  //       username: editingAccount.username,
+  //       email: editingAccount.email,
+  //       phone: editingAccount.phone,
+  //       note: editingAccount.note,
+  //     };
+
+  //     if (editingAccount.password) {
+  //       updatedData.password = editingAccount.password;
+  //       updatedData.confirmPassword = updatePassword;
+  //     }
+
+  //     console.log("Eding account data:", editingAccount);
+
+  //     const response = await fetch(
+  //       `https://backend.genbook.site/account/${editingAccount.id}`,
+  //       {
+  //         method: "PUT",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           Authorization: `Bearer ${storedToken}`,
+  //         },
+  //         body: JSON.stringify(updatedData),
+  //       }
+  //     );
+
+  //     if (!response.ok) throw new Error("Update failed");
+
+  //     message.success("Account updated successfully!");
+  //     setItems((prev) =>
+  //       prev.map((item) =>
+  //         item.id === editingAccount.id ? editingAccount : item
+  //       )
+  //     );
+  //     setDisplayedData((prev) =>
+  //       prev.map((item) =>
+  //         item.id === editingAccount.id ? editingAccount : item
+  //       )
+  //     );
+  //     setIsUpdateModalOpen(false);
+  //   } catch (error) {
+  //     console.error("Update failed:", error);
+  //     message.error("Update failed!");
+  //   }
+  // };
+  // 🛠️ Hàm lưu thay đổi – dùng Supabase
   const handleSaveUpdate = async () => {
     if (!editingAccount) return;
 
+    /* Nếu người dùng muốn đổi mật khẩu thì bắt buộc nhập lại
+     mật khẩu cũ (updatePassword) để xác nhận. */
     if (editingAccount.password && !updatePassword) {
       message.error("Please enter your current password to update!");
       return;
     }
 
-    try {
-      const updatedData = {
-        type: editingAccount.type,
-        name: editingAccount.name,
-        username: editingAccount.username,
-        email: editingAccount.email,
-        phone: editingAccount.phone,
-        note: editingAccount.note,
-      };
+    // ✂️ Chỉ gửi những trường cần cập nhật
+    const patch = {
+      type: editingAccount.type,
+      name: editingAccount.name,
+      username: editingAccount.username,
+      email: editingAccount.email,
+      phone: editingAccount.phone,
+      note: editingAccount.note,
+    };
 
-      if (editingAccount.password) {
-        updatedData.password = editingAccount.password;
-        updatedData.confirmPassword = updatePassword;
-      }
-
-      console.log("Eding account data:", editingAccount);
-
-      const response = await fetch(
-        `https://backend.genbook.site/account/${editingAccount.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${storedToken}`,
-          },
-          body: JSON.stringify(updatedData),
-        }
-      );
-
-      if (!response.ok) throw new Error("Update failed");
-
-      message.success("Account updated successfully!");
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === editingAccount.id ? editingAccount : item
-        )
-      );
-      setDisplayedData((prev) =>
-        prev.map((item) =>
-          item.id === editingAccount.id ? editingAccount : item
-        )
-      );
-      setIsUpdateModalOpen(false);
-    } catch (error) {
-      console.error("Update failed:", error);
-      message.error("Update failed!");
+    if (editingAccount.password) {
+      patch.password = editingAccount.password;
     }
+
+    /* 🔑 Nếu bảng users_accounts bật Row-Level-Security,
+     thường bạn có cột userId và policy kiểu:
+       userId = auth.uid()
+     Khi đó nên thêm .eq("userId", getUserId()) để chắc chắn
+     chỉ cập nhật record của chính chủ. */
+    const { data, error } = await supabaseClient
+      .from("users_accounts")
+      .update(patch)
+      .eq("id", editingAccount.id)
+      .eq("userId", getUserId()) // tuỳ policy của bạn
+      .select()
+      .single(); // trả về đúng 1 bản ghi
+
+    if (error) {
+      console.error("Update failed:", error);
+      message.error(error.message || "Update failed!");
+      return;
+    }
+
+    message.success("Account updated successfully!");
+
+    // 🖍️ Cập nhật state cục bộ
+    setItems((prev) =>
+      prev.map((item) => (item.id === data.id ? { ...item, ...data } : item))
+    );
+    setDisplayedData((prev) =>
+      prev.map((item) => (item.id === data.id ? { ...item, ...data } : item))
+    );
+    setIsUpdateModalOpen(false);
   };
 
   const showDeleteConfirm = (id) => {
@@ -197,54 +246,57 @@ export const SmartTableColumnNamesExample = () => {
       okText: "Yes",
       okType: "danger",
       cancelText: "No",
-      onOk: async () => {
-        try {
-          const response = await fetch(
-            `https://backend.genbook.site/account/${id}`,
-            {
-              method: "DELETE",
-              headers: {
-                Authorization: `Bearer ${storedToken}`,
-              },
-            }
-          );
-
-          if (!response.ok) throw new Error("Failed to delete");
-
-          message.success("Account deleted successfully!");
-          setItems((prev) => prev.filter((item) => item.id !== id));
-          setDisplayedData((prev) => prev.filter((item) => item.id !== id));
-        } catch (error) {
-          console.error("Delete failed:", error);
-          message.error("Delete failed!");
-        }
-      },
+      onOk: () => handleDelete(id), // dùng hàm mới
     });
   };
 
+  // const handleDelete = async (id) => {
+  //   if (!window.confirm("Are you sure you want to delete this account?"))
+  //     return;
+
+  //   try {
+  //     const response = await fetch(
+  //       `https://backend.genbook.site/account/${id}`,
+  //       {
+  //         method: "DELETE",
+  //         headers: {
+  //           Authorization: `Bearer ${storedToken}`,
+  //         },
+  //       }
+  //     );
+
+  //     if (!response.ok) throw new Error("Failed to delete");
+
+  //     message.success("Account deleted successfully!");
+  //     setItems((prev) => prev.filter((item) => item.id !== id));
+  //     setDisplayedData((prev) => prev.filter((item) => item.id !== id));
+  //   } catch (error) {
+  //     console.error("Delete failed:", error);
+  //     message.error("Delete failed!");
+  //   }
+  // };
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this account?"))
-      return;
-
     try {
-      const response = await fetch(
-        `https://backend.genbook.site/account/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${storedToken}`,
-          },
-        }
-      );
+      const { error } = await supabaseClient
+        .from("users_accounts")
+        .delete()
+        .eq("id", id)
+        .eq("userId", getUserId()); // đảm bảo chỉ xoá của đúng user
 
-      if (!response.ok) throw new Error("Failed to delete");
+      if (error) {
+        console.error("Delete failed:", error);
+        message.error("Delete failed: " + error.message);
+        return;
+      }
 
       message.success("Account deleted successfully!");
+
+      // Cập nhật UI sau khi xoá
       setItems((prev) => prev.filter((item) => item.id !== id));
       setDisplayedData((prev) => prev.filter((item) => item.id !== id));
-    } catch (error) {
-      console.error("Delete failed:", error);
-      message.error("Delete failed!");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      message.error("Unexpected error occurred!");
     }
   };
 
@@ -380,7 +432,7 @@ export const SmartTableColumnNamesExample = () => {
             </Button>
             <Link
               className="btn btn-primary d-flex align-items-center justify-content-center"
-              style={{ width: "32px", height: "32px"}}
+              style={{ width: "32px", height: "32px" }}
               to="/create-account"
             >
               <PlusOutlined style={{ fontSize: "16px" }} />

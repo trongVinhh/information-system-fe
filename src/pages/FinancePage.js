@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
-import { UserDetailsApi, UserSheetInfoApi } from "../services/Api";
 import { logout, isAuthenticated } from "../services/Auth";
 import FinanceTable from "../components/FinanceTable";
 
@@ -10,14 +9,6 @@ export default function FinancePage() {
   const [user, setUser] = useState({ name: "", email: "" });
   const [userSheetInfo, setUserSheetInfo] = useState({});
 
-  useEffect(() => {
-    if (isAuthenticated()) {
-      UserDetailsApi().then((response) => {
-        setUser({ name: response.data.name, email: response.data.email });
-      });
-
-    }
-  }, []);
 
   const logoutUser = () => {
     logout();
