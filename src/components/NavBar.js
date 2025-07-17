@@ -65,11 +65,7 @@ export default function NavBar(props) {
                   Tài khoản
                 </Link>
               </li>
-              // <li className="nav-item">
-              //   <Link className="nav-link" to="/finance">
-              //     Tài chính
-              //   </Link>
-              // </li>
+              
               {user && (
                 <li className="nav-item nav-custom">
                   <span className="nav-link text-white">
